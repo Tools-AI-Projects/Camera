@@ -94,6 +94,7 @@ public struct MCamera: View {
     @ObservedObject var manager: CameraManager
     @Namespace var namespace
     var config: Config = .init()
+    private var autoStopOnDisappear: Bool = true
 
     
     public var body: some View { if config.isCameraConfigured {
@@ -101,6 +102,12 @@ public struct MCamera: View {
             .onDisappear(perform: onDisappear)
             .onChange(of: manager.attributes.capturedMedia, perform: onCapturedMediaChange)
     }}
+}
+// MARK: Initializers
+public extension MCamera {
+    init(manager: CameraManager) {
+        self._manager = ObservedObject(wrappedValue: manager)
+    }
 }
 private extension MCamera {
     @ViewBuilder func createContent() -> some View {
@@ -135,7 +142,11 @@ private extension MCamera {
 private extension MCamera {
     func onDisappear() {
         lockScreenOrientation(nil)
-        manager.cancel()
+        if autoStopOnDisappear {
+            Task { @MainActor in
+                manager.stopAndTearDown()
+            }
+        }
     }
     func onCapturedMediaChange(_ capturedMedia: MCameraMedia?) {
         guard let capturedMedia, config.capturedMediaScreen == nil else { return }
@@ -162,7 +173,20 @@ private extension MCamera {
         } catch { print("(MijickCamera) ERROR DURING SETUP: \(error)") }
     }}
     func onCameraDisappear() {
-        manager.cancel()
+        if autoStopOnDisappear {
+            Task { @MainActor in
+                manager.stopAndTearDown()
+            }
+        }
+    }
+}
+
+// MARK: Public options
+public extension MCamera {
+    func setAutoStopOnDisappear(_ flag: Bool) -> Self {
+        var copy = self
+        copy.autoStopOnDisappear = flag
+        return copy
     }
 }
 

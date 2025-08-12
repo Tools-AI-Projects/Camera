@@ -23,6 +23,12 @@ extension CameraBridgeView {
         return inputView
     }
     func updateUIView(_ uiView: UIViewType, context: Context) {}
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        // Detach preview layer session when view is dismantled
+        Task { @MainActor in
+            coordinator.parent.cameraManager.cameraLayer.session = nil
+        }
+    }
     func makeCoordinator() -> Coordinator { .init(self) }
 }
 private extension CameraBridgeView {

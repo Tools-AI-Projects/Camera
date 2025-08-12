@@ -21,8 +21,8 @@ import AVKit
     private(set) var backCameraInput: (any CaptureDeviceInput)?
 
     // MARK: Output
-    private(set) var photoOutput: CameraManagerPhotoOutput = .init()
-    private(set) var videoOutput: CameraManagerVideoOutput = .init()
+    private(set) var photoOutput: CameraManagerPhotoOutput!
+    private(set) var videoOutput: CameraManagerVideoOutput!
 
     // MARK: UI Elements
     private(set) var cameraView: UIView!
@@ -40,6 +40,13 @@ import AVKit
         self.captureSession = captureSession
         self.frontCameraInput = CDI.get(mediaType: .video, position: .front)
         self.backCameraInput = CDI.get(mediaType: .video, position: .back)
+    }
+
+    deinit {
+        // Note: Do not call main-actor-isolated methods from deinit.
+        // Teardown is triggered via view disappearance or public API before deallocation.
+        NotificationCenter.default.removeObserver(self)
+        print("CameraManager deinit ✅")
     }
 }
 
@@ -81,8 +88,10 @@ private extension CameraManager {
         if let audioInput = getAudioInput() { try captureSession.add(input: audioInput) }
     }
     func setupDeviceOutput() throws(MCameraError) {
-        try photoOutput.setup(parent: self)
-        try videoOutput.setup(parent: self)
+        photoOutput = .init(parent: self)
+        videoOutput = .init(parent: self)
+        try photoOutput.setup()
+        try videoOutput.setup()
     }
     func setupFrameRecorder() throws(MCameraError) {
         let captureVideoOutput = AVCaptureVideoDataOutput()
@@ -90,13 +99,13 @@ private extension CameraManager {
 
         try captureSession.add(output: captureVideoOutput)
     }
-    func startSession() { Task {
-        guard let device = getCameraInput()?.device else { return }
+    func startSession() { Task { [weak self] in
+        guard let self, let device = self.getCameraInput()?.device else { return }
 
-        try await startCaptureSession()
-        try setupDevice(device)
-        resetAttributes(device: device)
-        cameraMetalView.performCameraEntranceAnimation()
+        try await self.startCaptureSession()
+        try self.setupDevice(device)
+        self.resetAttributes(device: device)
+        self.cameraMetalView.performCameraEntranceAnimation()
     }}
 }
 private extension CameraManager {
@@ -127,10 +136,7 @@ private extension CameraManager {
 // MARK: Cancel
 extension CameraManager {
     func cancel() {
-        captureSession = captureSession.stopRunningAndReturnNewInstance()
-        motionManager.reset()
-        videoOutput.reset()
-        notificationCenterManager.reset()
+        stopAndTearDown()
     }
 }
 
@@ -148,6 +154,57 @@ extension CameraManager {
             case .photo: photoOutput.capture()
             case .video: videoOutput.toggleRecording()
         }
+    }
+}
+
+// MARK: Hard Stop & Teardown
+extension CameraManager {
+    public func stopAndTearDown() {
+        // Stop recording if in progress
+        if let videoOutput, videoOutput.output.isRecording { videoOutput.output.stopRecording() }
+
+        if let avSession = captureSession as? AVCaptureSession {
+            if avSession.isRunning { avSession.stopRunning() }
+
+            // Detach delegates before removing outputs
+            for output in avSession.outputs {
+                if let videoDataOutput = output as? AVCaptureVideoDataOutput {
+                    videoDataOutput.setSampleBufferDelegate(nil, queue: nil)
+                }
+                // AVCaptureMovieFileOutput retains its delegate internally; ensure we stop recording to release it.
+            }
+
+            // Remove outputs and inputs
+            for output in avSession.outputs { avSession.removeOutput(output) }
+            for input in avSession.inputs { avSession.removeInput(input) }
+        } else {
+            // Fallback for mock: stop and get a fresh instance
+            captureSession = captureSession.stopRunningAndReturnNewInstance()
+        }
+
+        // Break preview layer <-> session
+        cameraLayer.session = nil
+
+        // Reset managers
+        motionManager.reset()
+        videoOutput?.reset()
+        notificationCenterManager.reset()
+
+        // Clear MTKView and overlays
+        cameraMetalView.isPaused = true
+        cameraMetalView.delegate = nil
+        cameraMetalView.removeFromSuperview()
+        cameraGridView.removeFromSuperview()
+
+        // Remove sublayers from cameraView just in case
+        cameraView?.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+
+        // Nil references to encourage ARC release
+        frontCameraInput = nil
+        backCameraInput = nil
+        photoOutput = nil
+        videoOutput = nil
+        cameraView = nil
     }
 }
 

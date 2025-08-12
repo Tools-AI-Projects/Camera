@@ -13,4 +13,10 @@ import Foundation
 
 extension MCamera { @MainActor public struct Controller {
     let mCamera: MCamera
+    public func close() { mCamera.config.closeMCameraAction() }
+    public func stopSession() {
+        Task { @MainActor in
+            mCamera.manager.stopAndTearDown()
+        }
+    }
 }}

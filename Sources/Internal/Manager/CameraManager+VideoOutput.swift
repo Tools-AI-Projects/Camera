@@ -14,17 +14,22 @@ import SwiftUI
 import MijickTimer
 
 @MainActor class CameraManagerVideoOutput: NSObject {
-    private(set) var parent: CameraManager!
+    private(set) weak var parent: CameraManager?
     private(set) var output: AVCaptureMovieFileOutput = .init()
     private(set) var timer: MTimer = .init(.camera)
     private(set) var recordingTime: MTime = .zero
     private(set) var firstRecordedFrame: UIImage?
+    override init() { super.init() }
 }
 
 // MARK: Setup
 extension CameraManagerVideoOutput {
-    func setup(parent: CameraManager) throws(MCameraError) {
+    convenience init(parent: CameraManager) {
+        self.init()
         self.parent = parent
+    }
+    func setup() throws(MCameraError) {
+        guard let parent else { return }
         try parent.captureSession.add(output: output)
     }
 }
@@ -58,7 +63,7 @@ private extension CameraManagerVideoOutput {
         storeLastFrame()
         output.startRecording(to: url, recordingDelegate: self)
         startRecordingTimer()
-        parent.objectWillChange.send()
+        parent?.objectWillChange.send()
     }
 }
 private extension CameraManagerVideoOutput {
@@ -66,25 +71,28 @@ private extension CameraManagerVideoOutput {
         FileManager.prepareURLForVideoOutput()
     }
     func configureOutput() {
-        guard let connection = output.connection(with: .video), connection.isVideoMirroringSupported else { return }
+        guard let parent, let connection = output.connection(with: .video), connection.isVideoMirroringSupported else { return }
 
         connection.isVideoMirrored = parent.attributes.mirrorOutput ? parent.attributes.cameraPosition != .front : parent.attributes.cameraPosition == .front
         connection.videoOrientation = parent.attributes.deviceOrientation
     }
     func storeLastFrame() {
-        guard let texture = parent.cameraMetalView.currentDrawable?.texture,
+        guard let parent,
+              let texture = parent.cameraMetalView.currentDrawable?.texture,
               let ciImage = CIImage(mtlTexture: texture, options: nil),
               let cgImage = parent.cameraMetalView.ciContext.createCGImage(ciImage, from: ciImage.extent)
         else { return }
 
         firstRecordedFrame = UIImage(cgImage: cgImage, scale: 1.0, orientation: parent.attributes.deviceOrientation.toImageOrientation())
     }
-    func startRecordingTimer() { try? timer
-        .publish(every: 1) { [self] in
-            recordingTime = $0
-            parent.objectWillChange.send()
-        }
-        .start()
+    func startRecordingTimer() {
+        try? timer
+            .publish(every: 1) { [weak self] in
+                guard let self else { return }
+                self.recordingTime = $0
+                self.parent?.objectWillChange.send()
+            }
+            .start()
     }
 }
 
@@ -99,18 +107,19 @@ private extension CameraManagerVideoOutput {
 private extension CameraManagerVideoOutput {
     func presentLastFrame() {
         let firstRecordedFrame = MCameraMedia(data: firstRecordedFrame)
-        parent.setCapturedMedia(firstRecordedFrame)
+        parent?.setCapturedMedia(firstRecordedFrame)
     }
 }
 
 // MARK: Receive Data
 extension CameraManagerVideoOutput: @preconcurrency AVCaptureFileOutputRecordingDelegate {
-    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: (any Error)?) { Task {
-        let videoURL = try await prepareVideo(outputFileURL: outputFileURL, cameraFilters: parent.attributes.cameraFilters)
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: (any Error)?) { Task { [weak self] in
+        guard let self else { return }
+        let videoURL = try await self.prepareVideo(outputFileURL: outputFileURL, cameraFilters: self.parent?.attributes.cameraFilters ?? [])
         let capturedVideo = MCameraMedia(data: videoURL)
 
         await Task.sleep(seconds: Animation.duration)
-        parent.setCapturedMedia(capturedVideo)
+        self.parent?.setCapturedMedia(capturedVideo)
     }}
 }
 private extension CameraManagerVideoOutput {
