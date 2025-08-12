@@ -91,7 +91,7 @@ import SwiftUI
  ```
  */
 public struct MCamera: View {
-    @ObservedObject var manager: CameraManager
+    @StateObject var manager: CameraManager
     @Namespace var namespace
     var config: Config = .init()
     private var autoStopOnDisappear: Bool = true
@@ -106,7 +106,7 @@ public struct MCamera: View {
 // MARK: Initializers
 public extension MCamera {
     init(manager: CameraManager) {
-        self._manager = ObservedObject(wrappedValue: manager)
+        self._manager = StateObject(wrappedValue: manager)
     }
 }
 private extension MCamera {
