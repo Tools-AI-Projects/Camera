@@ -168,8 +168,48 @@ private extension MCamera {
 private extension MCamera {
     func onCameraAppear() { Task {
         do {
+            // Apply initial config one-time before setup
+            if config.initialOutputType != nil ||
+               config.initialCameraPosition != nil ||
+               config.initialIsAudioAvailable != nil ||
+               config.initialZoomFactor != nil ||
+               config.initialFlashMode != nil ||
+               config.initialLightMode != nil ||
+               config.initialResolution != nil ||
+               config.initialFrameRate != nil ||
+               config.initialExposureDuration != nil ||
+               config.initialTargetBias != nil ||
+               config.initialISO != nil ||
+               config.initialExposureMode != nil ||
+               config.initialHDRMode != nil ||
+               config.initialFilters != nil ||
+               config.initialMirrorOutput != nil ||
+               config.initialGridVisibility != nil {
+                if let value = config.initialOutputType { manager.attributes.outputType = value }
+                if let value = config.initialCameraPosition { manager.attributes.cameraPosition = value }
+                if let value = config.initialIsAudioAvailable { manager.attributes.isAudioSourceAvailable = value }
+                if let value = config.initialZoomFactor { manager.attributes.zoomFactor = value }
+                if let value = config.initialFlashMode { manager.attributes.flashMode = value }
+                if let value = config.initialLightMode { manager.attributes.lightMode = value }
+                if let value = config.initialResolution { manager.attributes.resolution = value }
+                if let value = config.initialFrameRate { manager.attributes.frameRate = value }
+                if let value = config.initialExposureDuration { manager.attributes.cameraExposure.duration = value }
+                if let value = config.initialTargetBias { manager.attributes.cameraExposure.targetBias = value }
+                if let value = config.initialISO { manager.attributes.cameraExposure.iso = value }
+                if let value = config.initialExposureMode { manager.attributes.cameraExposure.mode = value }
+                if let value = config.initialHDRMode { manager.attributes.hdrMode = value }
+                if let value = config.initialFilters { manager.attributes.cameraFilters = value }
+                if let value = config.initialMirrorOutput { manager.attributes.mirrorOutput = value }
+                if let value = config.initialGridVisibility { manager.attributes.isGridVisible = value }
+            }
             try await manager.setup()
-            lockScreenOrientation(.portrait)
+            if config.shouldLockOrientationInPortrait {
+                manager.attributes.orientationLocked = true
+                lockScreenOrientation(.portrait)
+            }
+            if let value = config.focusImage { manager.cameraMetalView.focusIndicator.image = value }
+            if let value = config.focusImageColor { manager.cameraMetalView.focusIndicator.tintColor = value }
+            if let value = config.focusImageSize { manager.cameraMetalView.focusIndicator.size = value }
         } catch { print("(MijickCamera) ERROR DURING SETUP: \(error)") }
     }}
     func onCameraDisappear() {

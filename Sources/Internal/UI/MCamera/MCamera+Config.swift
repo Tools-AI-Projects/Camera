@@ -10,6 +10,8 @@
 
 
 import SwiftUI
+import UIKit
+import AVFoundation
 
 extension MCamera { @MainActor class Config {
     // MARK: Screens
@@ -25,4 +27,28 @@ extension MCamera { @MainActor class Config {
     // MARK: Others
     var appDelegate: MApplicationDelegate.Type? = nil
     var isCameraConfigured: Bool = false
+    var shouldLockOrientationInPortrait: Bool = false
+
+    // MARK: Initial Settings (applied on first camera appear)
+    var initialOutputType: CameraOutputType?
+    var initialCameraPosition: CameraPosition?
+    var initialIsAudioAvailable: Bool?
+    var initialZoomFactor: CGFloat?
+    var initialFlashMode: CameraFlashMode?
+    var initialLightMode: CameraLightMode?
+    var initialResolution: AVCaptureSession.Preset?
+    var initialFrameRate: Int32?
+    var initialExposureDuration: CMTime?
+    var initialTargetBias: Float?
+    var initialISO: Float?
+    var initialExposureMode: AVCaptureDevice.ExposureMode?
+    var initialHDRMode: CameraHDRMode?
+    var initialFilters: [CIFilter]?
+    var initialMirrorOutput: Bool?
+    var initialGridVisibility: Bool?
+
+    // MARK: Focus indicator customization
+    var focusImage: UIImage?
+    var focusImageColor: UIColor?
+    var focusImageSize: CGFloat?
 }}
