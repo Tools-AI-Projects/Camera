@@ -151,8 +151,8 @@ extension CameraManager {
         guard !isChanging else { return }
 
         switch attributes.outputType {
-            case .photo: photoOutput.capture()
-            case .video: videoOutput.toggleRecording()
+            case .photo: photoOutput?.capture()
+            case .video: videoOutput?.toggleRecording()
         }
     }
 }
