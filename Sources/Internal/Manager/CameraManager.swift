@@ -196,6 +196,17 @@ extension CameraManager {
         cameraMetalView.removeFromSuperview()
         cameraGridView.removeFromSuperview()
 
+        // Cancel any ongoing animations on the container and its subviews
+        cameraView?.layer.removeAllAnimations()
+        cameraView?.subviews.forEach { subview in
+            subview.layer.removeAllAnimations()
+        }
+
+        // Remove lingering focus indicator if present
+        if let focus = cameraView?.viewWithTag(.focusIndicatorTag) {
+            focus.removeFromSuperview()
+        }
+
         // Remove sublayers from cameraView just in case
         cameraView?.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 

@@ -152,9 +152,17 @@ private extension CameraMetalView {
         view.removeFromSuperview()
     }}
     func animateFocusIndicator(_ focusIndicator: UIImageView) {
-        UIView.animate(withDuration: 0.44, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0, animations: { focusIndicator.transform = .init(scaleX: 1, y: 1) }) { _ in
-            UIView.animate(withDuration: 0.44, delay: 1.44, animations: { focusIndicator.alpha = 0.2 }) { _ in
-                UIView.animate(withDuration: 0.44, delay: 1.44, animations: { focusIndicator.alpha = 0 })
+        UIView.animate(withDuration: 0.44, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0, animations: { [weak focusIndicator] in
+            focusIndicator?.transform = .init(scaleX: 1, y: 1)
+        }) { _ in
+            UIView.animate(withDuration: 0.44, delay: 1.44, animations: { [weak focusIndicator] in
+                focusIndicator?.alpha = 0.2
+            }) { _ in
+                UIView.animate(withDuration: 0.44, delay: 1.44, animations: { [weak focusIndicator] in
+                    focusIndicator?.alpha = 0
+                }) { _ in
+                    focusIndicator?.removeFromSuperview()
+                }
             }
         }
     }
