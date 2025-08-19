@@ -34,12 +34,14 @@ import AVKit
     private(set) var permissionsManager: CameraManagerPermissionsManager = .init()
     private(set) var motionManager: CameraManagerMotionManager = .init()
     private(set) var notificationCenterManager: CameraManagerNotificationCenter = .init()
+    private let captureDeviceInputFactory: (AVMediaType, AVCaptureDevice.Position?) -> (any CaptureDeviceInput)?
 
     // MARK: Initializer
     init<CS: CaptureSession, CDI: CaptureDeviceInput>(captureSession: CS, captureDeviceInputType: CDI.Type) {
         self.captureSession = captureSession
-        self.frontCameraInput = CDI.get(mediaType: .video, position: .front)
-        self.backCameraInput = CDI.get(mediaType: .video, position: .back)
+        self.captureDeviceInputFactory = { mediaType, position in captureDeviceInputType.get(mediaType: mediaType, position: position) }
+        self.frontCameraInput = captureDeviceInputType.get(mediaType: .video, position: .front)
+        self.backCameraInput = captureDeviceInputType.get(mediaType: .video, position: .back)
     }
 
     deinit {
@@ -62,6 +64,7 @@ extension CameraManager {
     func setup() async throws(MCameraError) {
         try await permissionsManager.requestAccess(parent: self)
 
+        restoreDeviceInputsIfNeeded()
         setupCameraLayer()
         try setupDeviceInputs()
         try setupDeviceOutput()
@@ -75,6 +78,10 @@ extension CameraManager {
     }
 }
 private extension CameraManager {
+    func restoreDeviceInputsIfNeeded() {
+        if frontCameraInput == nil { frontCameraInput = captureDeviceInputFactory(.video, .front) }
+        if backCameraInput == nil { backCameraInput = captureDeviceInputFactory(.video, .back) }
+    }
     func setupCameraLayer() {
         captureSession.sessionPreset = attributes.resolution
 

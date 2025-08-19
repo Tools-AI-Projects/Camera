@@ -161,7 +161,7 @@ private extension CameraMetalView {
                 UIView.animate(withDuration: 0.44, delay: 1.44, animations: { [weak focusIndicator] in
                     focusIndicator?.alpha = 0
                 }) { _ in
-                    focusIndicator?.removeFromSuperview()
+                    focusIndicator.removeFromSuperview()
                 }
             }
         }
