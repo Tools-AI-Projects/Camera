@@ -150,7 +150,9 @@ private extension MCamera {
     }
     func onCapturedMediaChange(_ capturedMedia: MCameraMedia?) {
         guard let capturedMedia, config.capturedMediaScreen == nil else { return }
+        // Auto-accept and then auto-retake when no captured media screen is configured
         notifyUserOfMediaCaptured(capturedMedia)
+        manager.setCapturedMedia(nil)
     }
 }
 private extension MCamera {

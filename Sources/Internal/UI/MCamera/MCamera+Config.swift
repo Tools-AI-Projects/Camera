@@ -16,7 +16,7 @@ import AVFoundation
 extension MCamera { @MainActor class Config {
     // MARK: Screens
     var cameraScreen: CameraScreenBuilder = DefaultCameraScreen.init
-    var capturedMediaScreen: CapturedMediaScreenBuilder? = DefaultCapturedMediaScreen.init
+    var capturedMediaScreen: CapturedMediaScreenBuilder? = nil
     var errorScreen: ErrorScreenBuilder = DefaultCameraErrorScreen.init
 
     // MARK: Actions
