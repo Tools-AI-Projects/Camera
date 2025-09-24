@@ -56,6 +56,7 @@ import AVKit
 extension CameraManager {
     func initialize(in view: UIView) {
         cameraView = view
+        attachPreviewLayerIfNeeded()
     }
 }
 
@@ -78,6 +79,13 @@ extension CameraManager {
     }
 }
 private extension CameraManager {
+    func attachPreviewLayerIfNeeded() {
+        guard let cameraView else { return }
+        // Avoid duplicate attachment
+        if cameraLayer.superlayer !== cameraView.layer {
+            cameraView.layer.addSublayer(cameraLayer)
+        }
+    }
     func restoreDeviceInputsIfNeeded() {
         if frontCameraInput == nil { frontCameraInput = captureDeviceInputFactory(.video, .front) }
         if backCameraInput == nil { backCameraInput = captureDeviceInputFactory(.video, .back) }
@@ -88,7 +96,7 @@ private extension CameraManager {
         cameraLayer.session = captureSession as? AVCaptureSession
         cameraLayer.videoGravity = .resizeAspectFill
         cameraLayer.isHidden = true
-        cameraView.layer.addSublayer(cameraLayer)
+        attachPreviewLayerIfNeeded()
     }
     func setupDeviceInputs() throws(MCameraError) {
         try captureSession.add(input: getCameraInput())
