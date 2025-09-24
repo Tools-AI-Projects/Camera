@@ -20,7 +20,7 @@ extension CameraGridView {
     func setup(parent: CameraManager) {
         self.parent = parent
         self.alpha = parent.attributes.isGridVisible ? 1 : 0
-        self.addToParent(parent.cameraView)
+        if let containerView = parent.cameraView { self.addToParent(containerView) }
     }
 }
 

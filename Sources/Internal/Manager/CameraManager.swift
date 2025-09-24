@@ -299,10 +299,16 @@ extension CameraManager {
     }
 }
 private extension CameraManager {
-    func convertTouchPointToFocusPoint(_ touchPoint: CGPoint) -> CGPoint { .init(
-        x: touchPoint.y / cameraView.frame.height,
-        y: 1 - touchPoint.x / cameraView.frame.width
-    )}
+    func convertTouchPointToFocusPoint(_ touchPoint: CGPoint) -> CGPoint {
+        guard let view = cameraView else { return CGPoint(x: CGFloat(0.5), y: CGFloat(0.5)) }
+        let width: CGFloat = view.frame.width
+        let height: CGFloat = view.frame.height
+        guard width > 0, height > 0 else { return CGPoint(x: CGFloat(0.5), y: CGFloat(0.5)) }
+
+        let x: CGFloat = touchPoint.y / height
+        let y: CGFloat = CGFloat(1) - (touchPoint.x / width)
+        return CGPoint(x: x, y: y)
+    }
     func setDeviceCameraFocus(_ focusPoint: CGPoint, _ device: any CaptureDevice) throws {
         try device.lockForConfiguration()
         device.setFocusPointOfInterest(focusPoint)

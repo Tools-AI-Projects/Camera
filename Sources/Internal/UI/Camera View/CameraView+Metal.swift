@@ -29,7 +29,7 @@ extension CameraMetalView {
 
         self.assignInitialValues(parent: parent, metalDevice: metalDevice)
         self.configureMetalView(metalDevice: metalDevice)
-        self.addToParent(parent.cameraView)
+        if let containerView = parent.cameraView { self.addToParent(containerView) }
     }
 }
 private extension CameraMetalView {
@@ -39,7 +39,7 @@ private extension CameraMetalView {
         self.commandQueue = metalDevice.makeCommandQueue()
     }
     func configureMetalView(metalDevice: MTLDevice) {
-        self.parent?.cameraView.alpha = 0
+        if let cameraView = self.parent?.cameraView { cameraView.alpha = 0 }
 
         self.delegate = self
         self.device = metalDevice
@@ -59,17 +59,18 @@ private extension CameraMetalView {
 
 // MARK: Camera Entrance
 extension CameraMetalView {
-    func performCameraEntranceAnimation() { UIView.animate(withDuration: 0.33) { [self] in
-        parent?.cameraView.alpha = 1
-    }}
+    func performCameraEntranceAnimation() {
+        guard let cameraView = parent?.cameraView else { return }
+        UIView.animate(withDuration: 0.33) { cameraView.alpha = 1 }
+    }
 }
 
 // MARK: Image Capture
 extension CameraMetalView {
     func performImageCaptureAnimation() {
         let blackMatte = createBlackMatte()
-
-        parent?.cameraView.addSubview(blackMatte)
+        guard let cameraView = parent?.cameraView else { return }
+        cameraView.addSubview(blackMatte)
         animateBlackMatte(blackMatte)
     }
 }
@@ -101,7 +102,7 @@ extension CameraMetalView {
         await Task.sleep(seconds: 0.01)
     }
     func finishCameraFlipAnimation() async {
-        guard let blurView = parent?.cameraView.viewWithTag(.blurViewTag) else { return }
+        guard let cameraView = parent?.cameraView, let blurView = cameraView.viewWithTag(.blurViewTag) else { return }
 
         await Task.sleep(seconds: 0.44)
         UIView.animate(withDuration: 0.3, animations: { blurView.alpha = 0 }) { [self] _ in
@@ -118,14 +119,14 @@ private extension CameraMetalView {
         return image
     }
     func insertBlurView(_ snapshot: UIImage?) {
-        let blurView = UIImageView(frame: parent?.cameraView.frame ?? .zero)
+        guard let cameraView = parent?.cameraView else { return }
+        let blurView = UIImageView(frame: cameraView.frame)
         blurView.image = snapshot
         blurView.contentMode = .scaleAspectFill
         blurView.clipsToBounds = true
         blurView.tag = .blurViewTag
         blurView.applyBlurEffect(style: .regular)
-
-        parent?.cameraView.addSubview(blurView)
+        cameraView.addSubview(blurView)
     }
     func animateBlurFlip() {
         if let cameraView = parent?.cameraView {
@@ -143,12 +144,13 @@ extension CameraMetalView {
         removeExistingFocusIndicatorAnimations()
 
         let focusIndicator = focusIndicator.create(at: touchPoint)
-        parent?.cameraView.addSubview(focusIndicator)
+        guard let cameraView = parent?.cameraView else { return }
+        cameraView.addSubview(focusIndicator)
         animateFocusIndicator(focusIndicator)
     }
 }
 private extension CameraMetalView {
-    func removeExistingFocusIndicatorAnimations() { if let view = parent?.cameraView.viewWithTag(.focusIndicatorTag) {
+    func removeExistingFocusIndicatorAnimations() { if let cameraView = parent?.cameraView, let view = cameraView.viewWithTag(.focusIndicatorTag) {
         view.removeFromSuperview()
     }}
     func animateFocusIndicator(_ focusIndicator: UIImageView) {
@@ -171,11 +173,12 @@ private extension CameraMetalView {
 // MARK: Camera Orientation
 extension CameraMetalView {
     func beginCameraOrientationAnimation(if shouldAnimate: Bool) async { if shouldAnimate {
-        parent?.cameraView.alpha = 0
+        if let cameraView = parent?.cameraView { cameraView.alpha = 0 }
         await Task.sleep(seconds: 0.1)
     }}
     func finishCameraOrientationAnimation(if shouldAnimate: Bool) { if shouldAnimate {
-        UIView.animate(withDuration: 0.2, delay: 0.1) { self.parent?.cameraView.alpha = 1 }
+        guard let cameraView = parent?.cameraView else { return }
+        UIView.animate(withDuration: 0.2, delay: 0.1) { cameraView.alpha = 1 }
     }}
 }
 
