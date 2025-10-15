@@ -195,6 +195,11 @@ extension CameraMetalView: @preconcurrency AVCaptureVideoDataOutputSampleBufferD
         let currentFrame = captureCurrentFrame(cvImageBuffer)
         let currentFrameWithFiltersApplied = applyingFiltersToCurrentFrame(currentFrame)
         redrawCameraView(currentFrameWithFiltersApplied)
+
+        // Safety: ensure the preview becomes visible on first frame (first launch)
+        if let cameraView = parent?.cameraView, cameraView.alpha == 0 {
+            DispatchQueue.main.async { [weak self] in self?.performCameraEntranceAnimation() }
+        }
     }
 }
 private extension CameraMetalView {

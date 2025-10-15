@@ -57,6 +57,7 @@ extension CameraManager {
     func initialize(in view: UIView) {
         cameraView = view
         attachPreviewLayerIfNeeded()
+        attachSubviewsIfNeeded()
     }
 }
 
@@ -84,6 +85,17 @@ private extension CameraManager {
         // Avoid duplicate attachment
         if cameraLayer.superlayer !== cameraView.layer {
             cameraView.layer.addSublayer(cameraLayer)
+        }
+    }
+    func attachSubviewsIfNeeded() {
+        guard let cameraView else { return }
+
+        // Ensure Metal preview and grid are attached if setup ran before initialize(in:)
+        if cameraMetalView.superview !== cameraView {
+            cameraMetalView.addToParent(cameraView)
+        }
+        if cameraGridView.superview !== cameraView {
+            cameraGridView.addToParent(cameraView)
         }
     }
     func restoreDeviceInputsIfNeeded() {
@@ -133,8 +145,13 @@ private extension CameraManager {
         let audioInput = captureDeviceInputType.get(mediaType: .audio, position: .unspecified)
         return audioInput
     }
-    nonisolated func startCaptureSession() async throws {
-        await captureSession.startRunning()
+    func startCaptureSession() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async { [captureSession] in
+                captureSession.startRunning()
+                continuation.resume(returning: ())
+            }
+        }
     }
     func setupDevice(_ device: any CaptureDevice) throws {
         try device.lockForConfiguration()
