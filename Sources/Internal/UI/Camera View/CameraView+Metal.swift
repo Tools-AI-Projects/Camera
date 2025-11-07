@@ -12,6 +12,7 @@
 import SwiftUI
 import MetalKit
 import AVKit
+import UIKit
 
 @MainActor class CameraMetalView: MTKView {
     private(set) weak var parent: CameraManager?
@@ -39,7 +40,7 @@ private extension CameraMetalView {
         self.commandQueue = metalDevice.makeCommandQueue()
     }
     func configureMetalView(metalDevice: MTLDevice) {
-        if let cameraView = self.parent?.cameraView { cameraView.alpha = 0 }
+        self.alpha = 0
 
         self.delegate = self
         self.device = metalDevice
@@ -60,8 +61,7 @@ private extension CameraMetalView {
 // MARK: Camera Entrance
 extension CameraMetalView {
     func performCameraEntranceAnimation() {
-        guard let cameraView = parent?.cameraView else { return }
-        UIView.animate(withDuration: 0.33) { cameraView.alpha = 1 }
+        UIView.animate(withDuration: 0.33) { self.alpha = 1 }
     }
 }
 
@@ -77,8 +77,16 @@ extension CameraMetalView {
 private extension CameraMetalView {
     func createBlackMatte() -> UIView {
         let view = UIView()
-        view.frame = parent?.cameraView.frame ?? .zero
-        view.backgroundColor = .init(resource: .mijickBackgroundPrimary)
+        if let container = parent?.cameraView {
+            view.frame = container.bounds
+        } else {
+            view.frame = .zero
+        }
+        if let color = UIColor(named: "mijick-background-primary", in: .module, compatibleWith: nil) {
+            view.backgroundColor = color
+        } else {
+            view.backgroundColor = .black
+        }
         view.alpha = 0
         return view
     }
@@ -197,7 +205,7 @@ extension CameraMetalView: @preconcurrency AVCaptureVideoDataOutputSampleBufferD
         redrawCameraView(currentFrameWithFiltersApplied)
 
         // Safety: ensure the preview becomes visible on first frame (first launch)
-        if let cameraView = parent?.cameraView, cameraView.alpha == 0 {
+        if self.alpha == 0 {
             DispatchQueue.main.async { [weak self] in self?.performCameraEntranceAnimation() }
         }
     }

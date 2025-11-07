@@ -126,14 +126,16 @@ private extension CameraManager {
 
         try captureSession.add(output: captureVideoOutput)
     }
-    func startSession() { Task { [weak self] in
-        guard let self, let device = self.getCameraInput()?.device else { return }
+    func startSession() {
+        Task { @MainActor in
+            guard let device = self.getCameraInput()?.device else { return }
 
-        try await self.startCaptureSession()
-        try self.setupDevice(device)
-        self.resetAttributes(device: device)
-        self.cameraMetalView.performCameraEntranceAnimation()
-    }}
+            try await self.startCaptureSession()
+            try self.setupDevice(device)
+            self.resetAttributes(device: device)
+            self.cameraMetalView.performCameraEntranceAnimation()
+        }
+    }
 }
 private extension CameraManager {
     func getAudioInput() -> (any CaptureDeviceInput)? {
