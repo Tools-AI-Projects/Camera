@@ -110,12 +110,19 @@ extension CameraMetalView {
         await Task.sleep(seconds: 0.01)
     }
     func finishCameraFlipAnimation() async {
-        guard let cameraView = parent?.cameraView, let blurView = cameraView.viewWithTag(.blurViewTag) else { return }
+        guard let cameraView = parent?.cameraView else { return }
 
         await Task.sleep(seconds: 0.44)
-        UIView.animate(withDuration: 0.3, animations: { blurView.alpha = 0 }) { [self] _ in
-            blurView.removeFromSuperview()
-            isAnimating = false
+        // Re-fetch the blur view after delay to avoid stale references if hierarchy changed
+        guard let blurView = cameraView.viewWithTag(.blurViewTag) else { isAnimating = false; return }
+        UIView.animate(withDuration: 0.3, animations: { [weak blurView] in
+            blurView?.alpha = 0
+        }) { [weak self, weak blurView] _ in
+            // Ensure the view is still attached before removing
+            if let view = blurView, view.superview != nil {
+                view.removeFromSuperview()
+            }
+            self?.isAnimating = false
         }
     }
 }
